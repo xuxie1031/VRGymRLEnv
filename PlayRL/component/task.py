@@ -51,7 +51,7 @@ class VRMazeTaskBase:
 
 
 class VRMazeTaskState(VRMazeTaskBase):
-    def __init__(self, name, state_dim=3, action_dim=4):
+    def __init__(self, name, state_dim=3, action_dim=3):
         VRMazeTaskBase.__init__(self)
         self.name = name
         self.state_dim = state_dim
@@ -59,7 +59,7 @@ class VRMazeTaskState(VRMazeTaskBase):
 
 
     def reset(self):
-        msg_dict = {'cmd': 'reset'}
+        msg_dict = {'continuousaction': {'reset': True}}
         msg = json.dumps(msg_dict)
         self.pub.publish(msg)
 
@@ -67,16 +67,14 @@ class VRMazeTaskState(VRMazeTaskBase):
         self.wait_execution()
 
         obj = json.loads(self.json_msg)
-        assert 'cmd' in obj
-        assert obj['cmd'] == 'reset'
         assert 'state' in obj
 
-        return np.asarray(obj['state'])
+        return np.asarray([obj['state']['X'], obj['state']['Y'], obj['state']['Z']])
 
 
     def step(self, state, action):
         action = action.clip(-1.0, 1.0)
-        msg_dict = {'cmd':'step', 'state':state.tolist(), 'action':action.tolist()}
+        msg_dict = {'continuousaction': {'action': {'X': action[0], 'Y': action[1], 'Z': action[2]}}}
         msg = json.dumps(msg_dict)
         self.pub.publish(msg)
 
@@ -84,15 +82,12 @@ class VRMazeTaskState(VRMazeTaskBase):
         self.wait_execution()
 
         obj = json.loads(self.json_msg)
-        assert 'cmd' in obj
-        assert obj['cmd'] == 'step'
-        assert 'state' in obj
         assert 'action' in obj
         assert 'next_state' in obj
         assert 'reward' in obj
         assert 'terminal' in obj
 
-        return np.asarray(obj['next_state']), float(obj['reward']), int(obj['terminal'])        
+        return np.asarray([obj['next_state']['X'], obj['next_state']['Y'], obj['next_state']['Z']]), float(obj['reward']), int(obj['terminal'])        
 
 
 class VRMazeTaskPixel(VRMazeTaskBase):

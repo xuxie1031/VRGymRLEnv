@@ -14,6 +14,7 @@ class DDPGAgent:
         self.random_process = config.random_process_fn(self.task.action_dim)
         self.total_steps = 0
 
+
     def soft_update(self, target, src):
         for target_param, param in zip(target.parameters(), src.parameters()):
             target_param.detach_()
