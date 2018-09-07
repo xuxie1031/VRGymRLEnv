@@ -12,7 +12,7 @@ class RunRLPlayGround(threading.Thread):
 
     def ddpg_low_dim_state(self):
         config = Config()
-        config.task_fn = lambda: VRMazeTaskState('VRMazeTask-State')
+        config.task_fn = lambda: VRMazeTaskStateContinuous('VRMazeTaskContinuous-State')
         config.network_fn = lambda state_dim, action_dim: DeterministicActorCriticNet(
             state_dim, action_dim,
             actor_body=FCBody(state_dim, (300, 200), gate=torch.tanh),
@@ -35,7 +35,7 @@ class RunRLPlayGround(threading.Thread):
     
     def ddpg_pixel(self):
         config = Config()
-        config.task_fn = lambda: VRMazeTaskPixel('VRMazeTask-Image')
+        config.task_fn = lambda: VRMazeTaskPixelContinuous('VRMazeTaskContinuous-Image')
 
         phi_body = DDPGConvBody(in_channels=1)
         config.network_fn = lambda state_dim, action_dim: DeterministicActorCriticNet(
@@ -55,6 +55,27 @@ class RunRLPlayGround(threading.Thread):
 
         ddpg_pixel_agent = DDPGAgent(config)
         run_episodes(ddpg_pixel_agent)
+
+
+    def a2c_pixel(self):
+        config = Config()
+        config.num_workers = 1
+        task_fn = lambda name: VRMazeTaskPixelDiscrete(name)
+        config.task_fn = ParallelizedTask(task_fn, 'VRMazeTaskDiscreteA2C-Image', config.num_workers)
+        config.optimizer_fn = lambda params: torch.optim.RMSprop(params, lr=7e-4)
+        config.network_fn = lambda state_dim, action_dim: CategoricalActorCriticNet(
+            state_dim, action_dim, NatureConvBody(), gpu=0)
+        
+        config.discount = 0.99
+        config.use_gae = True
+        config.gae_tau = 0.97
+        config.entropy_weight = 0.01
+        config.rollout_length = 5
+        config.gradient_clip = 0.5
+        config.load_model = False
+
+        a2c_pixel_agent = A2CAgent(config)
+        run_iterations(a2c_pixel_agent)
 
 
     def run(self):

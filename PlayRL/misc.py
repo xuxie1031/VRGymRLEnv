@@ -46,3 +46,20 @@ def run_episodes(agent):
         save_checkpoint(agent, '{0}.pth.tar'.format(agent.task.name), steps, rewards)
         if epi % 20 == 0:
             print('total steps {0}, avg reward {1}'.format(sum(steps), np.mean(rewards[-100:])))
+
+
+def run_iterations(agent):
+    steps = []
+    rewards = []
+
+    if agent.config.load_model:
+        agent, steps, rewards = load_checkpoint(agent, '{0}.pth.tar'.format(agent.task.name))
+
+    epi = 0
+    while True:
+        agent.iteration()
+        steps.append(agent.total_steps)
+        rewards.append(np.mean(agent.last_episode_rewards))
+        save_checkpoint(agent, '{0}.pth.tar'.format(agent.task.name), steps, rewards)
+        if epi % 20 == 0:
+            print('total steps {0}, avg reward {1}'.format(sum(steps), np.mean(rewards[-100:])))

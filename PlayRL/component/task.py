@@ -50,7 +50,7 @@ class VRMazeTaskBase:
         pass
 
 
-class VRMazeTaskState(VRMazeTaskBase):
+class VRMazeTaskStateContinuous(VRMazeTaskBase):
     def __init__(self, name, state_dim=3, action_dim=3):
         VRMazeTaskBase.__init__(self)
         self.name = name
@@ -91,7 +91,7 @@ class VRMazeTaskState(VRMazeTaskBase):
         return np.asarray([obj['next_state']['X'], obj['next_state']['Y'], obj['next_state']['Z']]), float(obj['reward']), int(obj['terminal'])        
 
 
-class VRMazeTaskPixel(VRMazeTaskBase):
+class VRMazeTaskPixelContinuous(VRMazeTaskBase):
     def __init__(self, name, state_dim=84, action_dim=3):
         VRMazeTaskBase.__init__(self)
         self.name = name
@@ -110,7 +110,7 @@ class VRMazeTaskPixel(VRMazeTaskBase):
         obj = json.loads(self.json_msg)
         assert 'state' in obj
 
-        state = np.asarray(obj['state'], dtype=np.float32).reshape((self.state_dim, -1))/255.0
+        state = np.asarray(obj['state'], dtype=np.float32).reshape((self.state_dim, -1))/256.0
 
         return np.asarray([state])  # one channel
 
@@ -130,6 +130,108 @@ class VRMazeTaskPixel(VRMazeTaskBase):
         assert 'reward' in obj
         assert 'terminal' in obj
 
-        next_state = np.asarray([obj['next_state']], dtype=np.float32).reshape((self.state_dim, -1))/255.0
+        next_state = np.asarray(obj['next_state'], dtype=np.float32).reshape((self.state_dim, -1))/256.0
 
         return np.asarray([next_state]), float(obj['reward']), int(obj['terminal'])
+
+
+class VRMazeTaskStateDiscrete(VRMazeTaskBase):
+    def __init__(self, name, state_dim=3, action_dim=5):
+        VRMazeTaskBase.__init__(self)
+        self.name = name
+        self.state_dim = state_dim
+        self.action_dim = action_dim     
+
+
+    def reset(self):
+        msg_dict = {'discreteaction': {'reset': True}}
+        msg = json.dumps(msg_dict)
+        self.pub.publish(msg)
+
+        # wait for execution
+        self.wait_execution()
+
+        obj = json.loads(self.json_msg)
+        assert 'state' in obj
+
+        return np.asarray([obj['state']['X'], obj['state']['Y'], obj['state']['Z']])
+
+
+    def step(self, state, action):
+        msg_dict = {'discreteaction': {'action': int(action)}}
+        msg = json.dumps(msg_dict)
+        self.pub.publish(msg)
+
+        # wait for execution
+        self.wait_execution()
+
+        # print(self.json_msg)
+        obj = json.loads(self.json_msg)
+        assert 'action' in obj
+        assert 'next_state' in obj
+        assert 'reward' in obj
+        assert 'terminal' in obj
+
+        return np.asarray(obj['next_state']['X'], obj['next_state']['Y'], obj['next_state']['Z']), float(obj['reward']), int(obj['terminal'])
+
+
+class VRMazeTaskPixelDiscrete(VRMazeTaskBase):
+    def __init__(self, name, state_dim=84, action_dim=5):
+        VRMazeTaskBase.__init__(self)
+        self.name = name
+        self.state_dim = state_dim
+        self.action_dim = action_dim     
+
+
+    def reset(self):
+        msg_dict = {'discreteimgaction': {'reset': True}}
+        msg = json.dumps(msg_dict)
+        self.pub.publish(msg)
+
+        # wait for execution
+        self.wait_execution()
+
+        obj = json.loads(self.json_msg)
+        assert 'state' in obj
+
+        state = np.asarray(obj['state'], dtype=np.float32).reshape((self.state_dim, -1))/256.0
+
+        return np.asarray(state)  # one channel
+
+
+    def step(self, state, action):
+        msg_dict = {'discreteimgaction': {'action': int(action)}}
+        msg = json.dumps(msg_dict)
+        self.pub.publish(msg)
+
+        # wait for execution
+        self.wait_execution()
+
+        obj = json.loads(self.json_msg)
+        assert 'action' in obj
+        assert 'next_state' in obj
+        assert 'reward' in obj
+        assert 'terminal' in obj
+
+        next_state = np.asarray(obj['next_state'], dtype=np.float32).reshape((self.state_dim, -1))/256.0
+
+        return np.asarray(next_state), float(obj['reward']), int(obj['terminal'])
+
+
+class ParallelizedTask:
+    def __init__(self, task_fn, task_name, num_workers):
+        self.tasks = [task_fn(task_name) for _ in range(num_workers)]
+        self.state_dim = self.tasks[0].state_dim
+        self.action_dim = self.tasks[0].action_dim
+        self.name = self.tasks[0].name
+
+    
+    def step(self, actions):
+        results = [task.step(action) for task, action in zip(self.tasks, actions)]
+        results = map(lambda x: np.stack(x), zip(*results))
+        return results
+
+    
+    def reset(self):
+        results = [task.reset() for task in self.tasks]
+        return np.stack(results)
