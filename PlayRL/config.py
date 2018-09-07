@@ -12,3 +12,4 @@ class Config:
         self.discount = .99
         self.target_network_mix = .001
         self.min_memory_size = 64
+        self.load_model = False

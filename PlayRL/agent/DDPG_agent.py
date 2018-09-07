@@ -31,23 +31,23 @@ class DDPGAgent:
     def episode(self, deterministic=False):
         self.random_process.reset_states()
         state = self.task.reset()
-        state = self.config.state_normalizer(state)
+        # state = self.config.state_normalizer(state)
 
         config = self.config
 
         steps = 0
         total_reward = 0.0
-        while True:
+        while steps < 1000:
             # self.evaluate()
             # self.evaluation_episodes()
 
             action = self.network.predict(np.stack([state]), True).flatten()
             if not deterministic:
                 action += self.random_process.sample()
-            next_state, reward, done = self.task.step(action)
-            next_state = self.config.state_normalizer(next_state)
+            next_state, reward, done = self.task.step(state, action)
+            # next_state = self.config.state_normalizer(next_state)
             total_reward += reward
-            reward = self.config.reward_normalizer(reward)
+            # reward = self.config.reward_normalizer(reward)
 
             if not deterministic:
                 self.replay.feed([state, action, reward, next_state, int(done)])
