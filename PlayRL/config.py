@@ -9,6 +9,7 @@ class Config:
         self.critic_network_fn = None
         self.replay_fn = None
         self.random_process_fn = None
+        self.policy_fn = None
         self.discount = .99
         self.num_workers = 1
 
@@ -21,5 +22,9 @@ class Config:
         self.value_loss_weight = 1.0
         self.rollout_length = 5
         self.gradient_clip = .5
+
+        self.target_network_update_freq = 10000
+        self.exploration_steps = 50000
+        self.double_q = False
 
         self.load_model = False

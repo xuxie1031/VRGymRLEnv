@@ -78,10 +78,30 @@ class RunRLPlayGround(threading.Thread):
         run_iterations(a2c_pixel_agent)
 
 
+    def dqn_pixel(self):
+        config = Config()
+        config.task_fn = lambda: VRMazeTaskPixelDiscrete('VRMazeTaskDiscreteDQN-Image')
+        config.network_fn = lambda state_dim, action_dim: VanillaNet(action_dim, NatureConvBody(in_channels=1), gpu=0)
+        config.optimizer_fn = lambda params: torch.optim.RMSprop(params, lr=.00025, alpha=.95, eps=.01)
+        config.policy_fn = lambda: GreedyPolicy(epsilon=1.0, final_step=1000000, min_epsilon=0.1)
+        config.replay_fn = lambda: Replay(memory_size=100000, batch_size=32)
+        
+        config.discount = 0.99
+        config.target_network_update_freq = 1000
+        config.exploration_steps = 500000
+        config.double_q = False
+        config.gradient_clip = 0.1
+        # config.load_model = True
+
+        dqn_pixel_agent = DQNAgent(config)
+        run_episodes(dqn_pixel_agent)
+
+
     def run(self):
         # self.ddpg_low_dim_state()
         # self.ddpg_pixel()
-        self.a2c_pixel()
+        # self.a2c_pixel()
+        self.dqn_pixel()
 
 
 if __name__ == '__main__':
