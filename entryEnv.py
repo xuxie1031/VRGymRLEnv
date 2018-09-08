@@ -61,18 +61,18 @@ class RunRLPlayGround(threading.Thread):
         config = Config()
         config.num_workers = 1
         task_fn = lambda name: VRMazeTaskPixelDiscrete(name)
-        config.task_fn = ParallelizedTask(task_fn, 'VRMazeTaskDiscreteA2C-Image', config.num_workers)
-        config.optimizer_fn = lambda params: torch.optim.RMSprop(params, lr=7e-4)
+        config.task_fn = lambda: ParallelizedTask(task_fn, 'VRMazeTaskDiscreteA2C-Image', config.num_workers)
+        config.optimizer_fn = lambda params: torch.optim.RMSprop(params, lr=5e-6)
         config.network_fn = lambda state_dim, action_dim: CategoricalActorCriticNet(
-            state_dim, action_dim, NatureConvBody(), gpu=0)
+            state_dim, action_dim, NatureConvBody(in_channels=1), gpu=0)
         
-        config.discount = 0.99
-        config.use_gae = True
+        config.discount = 0.95
+        config.use_gae = False
         config.gae_tau = 0.97
         config.entropy_weight = 0.01
-        config.rollout_length = 5
-        config.gradient_clip = 0.5
-        config.load_model = False
+        config.rollout_length = 200
+        config.gradient_clip = 0.1
+        # config.load_model = True
 
         a2c_pixel_agent = A2CAgent(config)
         run_iterations(a2c_pixel_agent)
@@ -80,7 +80,9 @@ class RunRLPlayGround(threading.Thread):
 
     def run(self):
         # self.ddpg_low_dim_state()
-        self.ddpg_pixel()
+        # self.ddpg_pixel()
+        self.a2c_pixel()
+
 
 if __name__ == '__main__':
 

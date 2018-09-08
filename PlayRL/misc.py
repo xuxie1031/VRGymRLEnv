@@ -2,7 +2,7 @@ import os
 import torch
 import numpy as np
 
-def save_checkpoint(agent, filename, steps, rewards):
+def save_checkpoint_ddpg(agent, filename, steps, rewards):
     state = {}
 
     state['network_dict'] = agent.network.state_dict()
@@ -16,7 +16,7 @@ def save_checkpoint(agent, filename, steps, rewards):
     torch.save(state, filename)
 
 
-def load_checkpoint(agent, filename):
+def load_checkpoint_ddpg(agent, filename):
     assert os.path.isfile(filename)
     state = torch.load(filename)
 
@@ -31,19 +31,42 @@ def load_checkpoint(agent, filename):
     return agent, steps, rewards
 
 
+def save_checkpoint_a2c(agent, filename, steps, rewards):
+    state = {}
+
+    state['network_dict'] = agent.network.state_dict()
+    state['network_opt'] = agent.optimizer.state_dict()
+    state['steps'] = steps
+    state['rewards'] = rewards
+
+    torch.save(state, filename)
+
+
+def load_checkpoint_a2c(agent, filename):
+    assert os.path.isfile(filename)
+    state = torch.load(filename)
+
+    agent.network.load_state_dict(state['network_dict'])
+    agent.optimizer.load_state_dict(state['network_opt'])
+    steps = state['steps']
+    rewards = state['rewards']
+
+    return agent, steps, rewards
+
+
 def run_episodes(agent):
     steps = []
     rewards = []
 
     if agent.config.load_model:
-        agent, steps, rewards = load_checkpoint(agent, '{0}.pth.tar'.format(agent.task.name))
+        agent, steps, rewards = load_checkpoint_ddpg(agent, '{0}.pth.tar'.format(agent.task.name))
 
     epi = 0
     while True:
         reward, step = agent.episode()
         steps.append(step)
         rewards.append(reward)
-        save_checkpoint(agent, '{0}.pth.tar'.format(agent.task.name), steps, rewards)
+        save_checkpoint_ddpg(agent, '{0}.pth.tar'.format(agent.task.name), steps, rewards)
         if epi % 20 == 0:
             print('total steps {0}, avg reward {1}'.format(sum(steps), np.mean(rewards[-100:])))
 
@@ -53,13 +76,13 @@ def run_iterations(agent):
     rewards = []
 
     if agent.config.load_model:
-        agent, steps, rewards = load_checkpoint(agent, '{0}.pth.tar'.format(agent.task.name))
+        agent, steps, rewards = load_checkpoint_a2c(agent, '{0}.pth.tar'.format(agent.task.name))
 
     epi = 0
     while True:
         agent.iteration()
         steps.append(agent.total_steps)
-        rewards.append(np.mean(agent.last_episode_rewards))
-        save_checkpoint(agent, '{0}.pth.tar'.format(agent.task.name), steps, rewards)
+        rewards.append(np.mean(agent.episode_rewards))
+        save_checkpoint_a2c(agent, '{0}.pth.tar'.format(agent.task.name), steps, rewards)
         if epi % 20 == 0:
             print('total steps {0}, avg reward {1}'.format(sum(steps), np.mean(rewards[-100:])))

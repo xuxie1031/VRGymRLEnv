@@ -157,7 +157,7 @@ class VRMazeTaskStateDiscrete(VRMazeTaskBase):
         return np.asarray([obj['state']['X'], obj['state']['Y'], obj['state']['Z']])
 
 
-    def step(self, state, action):
+    def step(self, action):
         msg_dict = {'discreteaction': {'action': int(action)}}
         msg = json.dumps(msg_dict)
         self.pub.publish(msg)
@@ -196,10 +196,10 @@ class VRMazeTaskPixelDiscrete(VRMazeTaskBase):
 
         state = np.asarray(obj['state'], dtype=np.float32).reshape((self.state_dim, -1))/256.0
 
-        return np.asarray(state)  # one channel
+        return np.asarray([state])  # one channel
 
 
-    def step(self, state, action):
+    def step(self, action):
         msg_dict = {'discreteimgaction': {'action': int(action)}}
         msg = json.dumps(msg_dict)
         self.pub.publish(msg)
@@ -215,7 +215,7 @@ class VRMazeTaskPixelDiscrete(VRMazeTaskBase):
 
         next_state = np.asarray(obj['next_state'], dtype=np.float32).reshape((self.state_dim, -1))/256.0
 
-        return np.asarray(next_state), float(obj['reward']), int(obj['terminal'])
+        return np.asarray([next_state]), float(obj['reward']), int(obj['terminal'])
 
 
 class ParallelizedTask:

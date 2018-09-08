@@ -18,7 +18,7 @@ class A2CAgent:
         states = self.states
         for _ in range(config.rollout_length):
             actions, log_probs, entropy, values = self.network.predict(states)
-            next_states, rewards, terminals, _ = self.task.step(actions.detach().cpu().numpy())
+            next_states, rewards, terminals = self.task.step(actions.detach().cpu().numpy())
             self.episode_rewards += rewards
             for i, terminal in enumerate(terminals):
                 if terminals[i]:
@@ -39,7 +39,7 @@ class A2CAgent:
             log_prob, value, actions, rewards, terminals, entropy = rollout[i]
             terminals = self.network.tensor(terminals).unsqueeze(1)
             rewards = self.network.tensor(rewards).unsqueeze(1)
-            next_value = rollout[i + 1][2]
+            next_value = rollout[i + 1][1]
             returns = rewards + config.discount * terminals * returns
             if not config.use_gae:
                 advantages = returns - value.detach()
